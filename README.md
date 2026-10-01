@@ -22,7 +22,8 @@ The controller is small: **36M parameters** (175 MB), and it **runs in real time
 threads of a laptop CPU. It is trained on **thousands of hours of motion**:
 [MotionPersonaX](https://huggingface.co/datasets/myshi/MotionPersonaX) holds 4,200 hours (33 hours of captured takes
 retargeted onto 128 bodies), and after the evaluation split is held out the VAE trains on 3,700 hours and the prior on
-2,500 hours.
+2,500 hours. Training is **efficient**: both stages finish in **about 30 hours on consumer GPUs**, under 100 GPU-hours
+in total (VAE: ~10 h on 2x RTX 4090; prior: ~19 h on 4x RTX 4090).
 
 This repository contains the training code of both stages, the released model, offline generation, the evaluation
 protocol of the paper and an interactive realtime demo.

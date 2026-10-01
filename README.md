@@ -16,8 +16,13 @@ faster.</em></p>
 
 A generative locomotion controller with three controls: a captured motion **persona** (who is moving), a target
 **body** (an SMPL-X body shape that carries the motion) and a performed **style** (how the character is moving), under
-a trajectory command. One model covers 44 captured personas, a wide family of SMPL-X bodies and nine styles, and runs
-at 27 ms per block on two threads of a laptop CPU.
+a trajectory command. One model covers 44 captured personas, a wide family of SMPL-X bodies and nine styles.
+
+The controller is small: **36M parameters** (175 MB), and it **runs in real time on a CPU**, at 27 ms per block on two
+threads of a laptop CPU. It is trained on **thousands of hours of motion**:
+[MotionPersonaX](https://huggingface.co/datasets/myshi/MotionPersonaX) holds 4,200 hours (33 hours of captured takes
+retargeted onto 128 bodies), and after the evaluation split is held out the VAE trains on 3,700 hours and the prior on
+2,500 hours.
 
 This repository contains the training code of both stages, the released model, offline generation, the evaluation
 protocol of the paper and an interactive realtime demo.

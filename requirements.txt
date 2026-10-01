@@ -1,0 +1,16 @@
+# Training + offline generation. Tested with Python 3.10-3.12 and torch 2.13 (CPU, MPS and CUDA 12.6 builds).
+# For a CUDA build pick the wheel index that matches your driver, e.g.
+#   pip install torch --index-url https://download.pytorch.org/whl/cu126
+torch>=2.4
+numpy>=1.26
+scipy>=1.11
+tqdm>=4.66
+tensorboard>=2.15
+diffusers>=0.30
+torch-ema>=0.3
+lightning>=2.6,<3
+huggingface_hub>=0.24
+hydra-core>=1.3.2,<1.4
+omegaconf>=2.3,<2.4
+zstandard>=0.22                    # scripts/prepare_data.py (reads the .tar.zst archives; the zstd CLI also works)
+matplotlib>=3.8                    # scripts/visualize.py (stick-figure previews)

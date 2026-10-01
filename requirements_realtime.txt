@@ -1,0 +1,11 @@
+# Realtime demo (realtime_demo.py). Python 3.12 or 3.13 (raylib 5.5 wheels; on macOS arm64 use 3.13).
+# 1. the training / generation dependencies
+-r requirements.txt
+# 2. the renderer: ai4animationpy (CC BY-NC 4.0, https://github.com/facebookresearch/ai4animationpy) at commit
+#    bfb5866681f7ea6dac9984be05181de5955eb48b with realtime/patch/ai4animationpy.patch applied, installed editable:
+#      git clone https://github.com/facebookresearch/ai4animationpy.git && cd ai4animationpy
+#      git checkout bfb5866681f7ea6dac9984be05181de5955eb48b && git apply <this repo>/realtime/patch/ai4animationpy.patch
+#      pip install -e .
+raylib==5.5.0.0
+pygltflib==1.16.5
+pillow>=10

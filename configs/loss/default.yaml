@@ -1,0 +1,9 @@
+# loss terms: mse, 3d, vel, diff (contact off by default); per-term weights are fixed in network/losses.py
+mse: true
+geo3d: true
+vel: true
+diff: true
+contact: false
+contact_w: 1.0                     # multiplier on loss_foot_contact (contact=true); 1 = unscaled
+accel: false                       # optional second-order (acceleration) term over the whole future window, not just the seam -- the default loss is first order everywhere except loss_seam_acc, so nothing penalises the patch decoder's jerk spike at each token boundary
+accel_w: 5.0                       # same weight as loss_data_vel / loss_geo_xyz_vel

@@ -1,0 +1,57 @@
+# @package _global_
+# Stage 2: the persona-conditioned latent prior of the paper (flow matching in the frozen codec's token space).
+#
+#   torchrun --nproc_per_node=4 train.py experiment=prior diffusion.vae_ckpt=save/codec/best.ckpt
+#
+# Budget of the released checkpoint: 100 epochs x 1500 iterations x 4 ranks x 1024 windows
+# (6,000 batches of 1,024 windows per epoch), lr 1e-4 cosine-annealed to 1e-5.
+#   denoiser  LatentDiT: 8 pre-LN adaLN-Zero blocks x 384, ff 1024, 4 heads, dropout 0.2
+#   tokens    persona = learned performer-ID token + three typed attribute tokens (role / affiliation / dominance),
+#             style = learned token over the 10-style vocabulary, body shape = betas token, trajectory tokens,
+#             history token (masked with p = 0.15 during training: enables history guidance at runtime)
+#   z         z1 ~ q(z|x) (posterior sample) during training
+defaults:
+  - override /diffusion: latfm
+name: prior
+diffusion:
+  vae_ckpt: save/codec/best.ckpt
+  arch: dit
+  pos: abs
+  grad_ckpt: true                     # activation checkpointing (numerically identical, ~1/4 the memory)
+  t_sampling: uniform
+  z_posterior_sample: true
+  use_shape: true
+  sample_steps: 8
+  sampler: euler
+model:
+  latent_dim: 384
+  ff_size: 1024
+  num_heads: 4
+  num_layers: 8
+  dropout: 0.2
+  cond_mask_prob: 0.15                # history-token masking
+  style_cond: embed
+  persona_cond: id_attr
+data:
+  name: motionpersonax_flat
+  path: data/motionpersonax_flat      # must be the codec's data (scripts/prepare_data.py)
+  text_source: text_feat              # not read by persona_cond=id_attr
+  batch_size: 1024
+  workers: 8
+  mirror_prob: 0.5
+  mirror_skel: true
+  skel_root_basis: sole
+  split: data/eval/split_v2           # held-out bodies, withheld persona x body cells and held-out takes leave training
+  traj_pad: 18
+  sampler: balanced
+  balance_by: [subject]
+trainer:
+  epochs: 100
+  limit_train_batches: 1500
+  lr: 1.0e-4
+  lr_min_ratio: 0.1
+  save_freq: 10
+  best_after: 10
+paths:
+  save: save
+  run_dir: ${paths.save}/${name}

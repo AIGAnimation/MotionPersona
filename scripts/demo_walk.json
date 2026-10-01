@@ -1,0 +1,13 @@
+{
+ "note": "Example input script for realtime_demo.py (--script / --headless): walk, a 90 deg right turn, a style change, a persona change, a body morph, stop. Format: realtime/stream_io.py.",
+ "start": {"subject": "p02", "style": "neutral"},
+ "events": [
+  {"t": 0.0, "stick": [0, -1], "ramp": 0.8},
+  {"t": 4.0, "stick": [-1, 0]},
+  {"t": 7.0, "style": "happy"},
+  {"t": 11.0, "subject": "p10"},
+  {"t": 14.0, "body": "grid_h08_g04", "over": 3.0},
+  {"t": 19.0, "stick": [0, 0], "ramp": 0.8},
+  {"t": 22.0, "end": true}
+ ]
+}

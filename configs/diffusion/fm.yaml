@@ -1,0 +1,18 @@
+# Rectified flow in motion space (network/fm.py). x_t = (1-t)*noise + t*data; the model predicts v;
+# x1_hat = x_t + (1-t)*v feeds the unchanged loss stack. Export semantics: pred = one-pass x1_hat at a
+# random t; sample = the Euler/Heun ODE rollout.
+type: fm
+time_bins: 1000        # integer t bins for the discrete TimestepEmbedder (<= 5000, models.py pe table)
+sample_steps: 8        # ODE integration steps at sampling time (export --steps overrides)
+sampler: euler         # euler | heun | x1 (x1 = x1-anchored non-compounding steps, DDPM-x0 style)
+v_loss_w: 0.0          # optional direct v-MSE on future frames (ablation: 0.5)
+# ---- parent-compat shim: MotionDiffusionModule.__init__ unconditionally builds a DDPMScheduler from these
+# five keys (plus delta/num_inference_steps reads); the scheduler is never used by this head. Do not remove
+# (struct mode). ----
+num_train_timesteps: 1000
+beta_schedule: squaredcos_cap_v2
+prediction_type: sample
+variance_type: fixed_small
+clip_sample: false
+num_inference_steps: null
+delta: false

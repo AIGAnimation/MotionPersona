@@ -1,0 +1,27 @@
+# @package _global_
+# CPU smoke run of stage 1 on the 10 example clips (example_data/sample10), a few minutes:
+#   python train.py experiment=example_codec
+defaults:
+  - codec
+  - _self_
+name: example_codec
+overwrite: true
+data:
+  name: sample10
+  path: example_data/sample10
+  split: null
+  split_apply: null
+  batch_size: 64
+  workers: 0
+  prewarm: false
+  sampler: uniform
+trainer:
+  epochs: 2
+  limit_train_batches: 5
+  accelerator: cpu
+  devices: 1
+  progress_bar: false
+  save_freq: 1
+  best_after: 0
+export:
+  num_samples: 4

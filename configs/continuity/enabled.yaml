@@ -1,0 +1,9 @@
+# history->future continuity: clean pinned prefix, is_clean token, seam losses,
+# prefix re-pinned at every sampling step. 100% of samples carry the prefix (cond_mask_prob forced to 0).
+enabled: true
+seam:
+  window: 5
+  w_pos: 0.5
+  w_vel: 0.5
+  w_acc: 0.25
+  use_xyz: true

@@ -1,0 +1,7 @@
+enabled: false
+seam:
+  window: 5
+  w_pos: 0.5
+  w_vel: 0.5
+  w_acc: 0.25
+  use_xyz: true

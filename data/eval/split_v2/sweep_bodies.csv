@@ -1,0 +1,18 @@
+# generator: split v2.1, seed 0; R2: 12 train grid bodies at hip_w quantiles (2i+1)/24, 4 held-out at (2i+1)/8
+body,name,role,rank,hip_w,leg
+72,grid_h03_g00,train,0,0.09295,0.61756
+49,grid_h00_g01,train,1,0.09798,0.45916
+97,grid_h06_g01,train,2,0.10404,0.76526
+82,grid_h04_g02,train,3,0.11088,0.65668
+114,grid_h08_g02,train,4,0.11384,0.86225
+91,grid_h05_g03,train,5,0.11936,0.70255
+76,grid_h03_g04,train,6,0.12338,0.59618
+54,grid_h00_g06,train,7,0.12779,0.4386
+62,grid_h01_g06,train,8,0.1305,0.48811
+117,grid_h08_g05,train,9,0.13649,0.84627
+102,grid_h06_g06,train,10,0.14032,0.73977
+103,grid_h06_g07,train,11,0.14617,0.7357
+65,grid_h02_g01,heldout,0,0.10084,0.56026
+90,grid_h05_g02,heldout,1,0.11182,0.70786
+100,grid_h06_g04,heldout,2,0.12749,0.74872
+70,grid_h02_g06,heldout,3,0.13292,0.53795

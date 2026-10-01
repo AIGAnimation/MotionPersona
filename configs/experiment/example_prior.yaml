@@ -1,0 +1,30 @@
+# @package _global_
+# CPU smoke run of stage 2 on the 10 example clips, on top of a codec checkpoint:
+#   python train.py experiment=example_prior                                                   # after example_codec
+#   python train.py experiment=example_prior diffusion.vae_ckpt=../program/checkpoints/codec.ckpt   # released codec
+defaults:
+  - prior
+  - _self_
+name: example_prior
+overwrite: true
+diffusion:
+  vae_ckpt: save/example_codec/best.ckpt
+  grad_ckpt: false
+data:
+  name: sample10
+  path: example_data/sample10
+  split: null
+  batch_size: 64
+  workers: 0
+  prewarm: false
+  sampler: uniform
+trainer:
+  epochs: 2
+  limit_train_batches: 5
+  accelerator: cpu
+  devices: 1
+  progress_bar: false
+  save_freq: 1
+  best_after: 0
+export:
+  num_samples: 4

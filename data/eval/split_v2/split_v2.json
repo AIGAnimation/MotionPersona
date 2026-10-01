@@ -1,0 +1,28 @@
+{
+ "version": "split v2.1",
+ "seed": 0,
+ "bodies_csv": "data/bodies/bodies.csv",
+ "takes_csv": null,
+ "files": {
+  "heldout_bodies.csv": "1ef194c4e50e750d7825c8421ad50db2086abceb01a853e5d1902222cde88836",
+  "sweep_bodies.csv": "8f885b67f725277ea8339fb618a70758ba3ec243d8da83290bc017d723e9de25",
+  "withheld_cells.csv": "d349341c2cb8bf5013552c0682397981c08bc979a4447db216c8e255a5f6f78c",
+  "heldout_takes.csv": "857eb516a653666614c90b7a3b16bfedbf65d5a18883409cb83e183bc30084d8"
+ },
+ "n_heldout_bodies": 15,
+ "n_sweep_train": 12,
+ "n_sweep_heldout": 4,
+ "n_withheld_cells": 132,
+ "n_source_takes": 2570,
+ "n_heldout_takes": 744,
+ "heldout_take_fraction": 0.2895,
+ "n_reference": 376,
+ "n_query": 368,
+ "cells_by_held": {
+  "0": 14,
+  "1": 8,
+  "2": 368
+ },
+ "pinned": [],
+ "rows_excluded_per_128": "held-out takes x 128 rows + held-out bodies x 1826 takes + withheld cells"
+}

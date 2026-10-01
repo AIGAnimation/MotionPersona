@@ -1,0 +1,11 @@
+idx,subject,stem,style,body,body_name,kind,n_frames
+0,p36,p36_neutral_id,neutral,39,p36,own,521
+1,p05,p05_angry_id,angry,4,p05,own,456
+2,p24,p24_happy_sr,happy,24,p24,own,810
+3,p06,p06_depressed_tr,depressed,5,p06,own,745
+4,p17,p17_fear_sr,fear,27,b27,real,859
+5,p29,p29_drunk_fw,drunk,37,p34,real,791
+6,p14,p14_bigstep_tr,bigstep,39,p36,real,702
+7,p02,p02_swimming_tr,swimming,66,grid_h02_g02,grid,373
+8,p38,p38_twofootjump_sw,twofootjump,52,grid_h00_g04,grid,559
+9,p11,p11_neutral_fr,neutral,72,grid_h03_g00,grid,846

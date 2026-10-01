@@ -1,0 +1,63 @@
+# Root Hydra config. Run dir / logging are owned by train.py (Hydra creates nothing on disk).
+defaults:
+  - _self_                     # first: everything below (groups, then the experiment) overrides this file
+  - data: default
+  - model: mlp
+  - diffusion: ddpm4
+  - loss: default
+  - continuity: disabled
+  - trainer: default
+  - experiment: null           # last: `experiment=<name>` overrides any group value
+  - override hydra/job_logging: disabled
+  - override hydra/hydra_logging: disabled
+
+name: debug
+seed: 1024
+resume: null          # Lightning .ckpt path, or "last" -> ${paths.run_dir}/last.ckpt
+init_from: null       # weights-only warm start: a {'state_dict': ...} .pt or a Lightning .ckpt
+overwrite: false      # run_dir exists -> fail unless overwrite=true (rmtree) or resume is set
+
+paths:
+  save: save/${data.name}
+  run_dir: ${paths.save}/${name}_${data.name}
+
+export:               # BVH sample export (init / every save_freq epochs / best)
+  num_samples: 16
+  seed: 0             # which clips are exported (fixed for the whole run)
+  use_ema: false
+  sample: true        # additionally run the DDPM sampling loop -> motion_i.sample.bvh
+  raw_prefix: false   # also write motion_i.{pred,sample}_raw.bvh with the model's own (unused) history frames
+  foot_lock:          # toe-contact locking + leg IK on the exported pred/sample clips (utils/foot_lock.py, Holden 2022)
+    enabled: false
+    mode: runtime       # runtime: per-frame lock state machine + inertialization | offline: constraint solve over the clip
+    keep_unlocked: true # when enabled, also write the untouched clip as motion_i.{pred,sample}_nolock.bvh
+    vel_thr: 2.0        # contact = toe speed < vel_thr (cm/frame; 2.0 = 0.6 m/s @ 30 fps) ...
+    height_thr: 5.0     # ... and toe height above the ground < height_thr (cm)
+    vote: 3             # majority-vote window (frames)
+    min_gap: 2          # fill non-contact gaps of <= min_gap frames
+    min_len: 3          # drop contact runs shorter than min_len frames
+    ground: null        # ground height (cm); null = lowest toe of the clip
+    plant: false        # pull locked toes down to the ground height
+    blend: 0.1          # runtime: inertialization blend time (s)
+    lock_dist: 15.0     # runtime: lock only when the output is within lock_dist of the input (cm)
+    unlock_dist: 25.0   # runtime: release when the input drifts further than unlock_dist from the lock (cm)
+    soft: 0.05          # offline: soft-constraint factor
+    hard: 0.9           # offline: contact-constraint factor
+    iters: 5000         # offline: solver iterations
+    pin: null           # offline: leading frames held fixed; null = data.past_frame
+    max_ext: 0.98       # IK: max hip-heel reach as a fraction of thigh + shin (never below the input pose's reach)
+    softening: 0.5      # IK: extension clamp softening (cm)
+
+checks:
+  ddp_sanity: true    # per-epoch cross-rank parameter checksum + disjoint sampler check
+  finite_guard: true  # abort (with a batch dump) on a non-finite loss
+
+hydra:
+  run:
+    dir: .
+  sweep:
+    dir: .
+    subdir: .
+  output_subdir: null
+  job:
+    chdir: false

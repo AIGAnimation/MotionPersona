@@ -1,0 +1,19 @@
+epochs: 200
+lr: 1.0e-4
+weight_decay: 0.005
+lr_min_ratio: 0.1                  # CosineAnnealingLR eta_min = lr * lr_min_ratio, stepped per epoch
+ema:
+  enabled: true
+  decay: 0.995
+  use_for_eval: false              # export samples with the EMA weights
+save_freq: null                    # null -> epochs // 10
+best_after: null                   # best.ckpt only after this epoch (null -> epochs // 10)
+save_last: true
+log_interval: null                 # running-loss log lines per epoch; null -> max(1, num_batches // 50)
+accelerator: auto                  # cpu | gpu | auto
+devices: auto                      # overridden by LOCAL_WORLD_SIZE under torchrun
+precision: 32-true
+limit_train_batches: 1.0           # int (batches per epoch per rank) or fraction
+accumulate: 1                      # gradient accumulation steps: effective batch = data.batch_size * accumulate * ranks (e.g. for the raw-motion baseline, whose per-frame token sequence does not fit 1024 on a 24 GB card)
+profiler: null                     # e.g. simple
+progress_bar: true

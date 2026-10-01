@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.DS_Store
+.venv*/
+# downloaded / generated
+checkpoints/
+outputs/
+save/
+data/MotionPersonaX/
+data/motionpersonax_flat/
+data/body_models/
+realtime/assets/smplx_neutral.glb
+ai4animationpy/

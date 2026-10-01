@@ -1,0 +1,9 @@
+rot_req: 6d
+latent_dim: 256
+ff_size: 1024
+num_heads: 4
+num_layers: 4
+dropout: 0.2
+cond_mask_prob: 0.15               # training-time random dropout of the past_motion condition (0 under continuity)
+style_cond: none                   # none | embed = learned per-style token (data/loco_dataset.py STYLE_VOCAB from meta label.style; never masked). latfm / ddpm / fm heads; pair with data.text_source=persona_feat
+persona_cond: text                 # text = CLIP token of the text_source prompt | id = learned performer-ID token (SUBJECT_VOCAB) | attr = three typed attribute tokens (role/affiliation/dominance from meta label) | id_attr = all four (the paper's prior) | none = no persona token (ablation). latfm / ddpm / fm heads; never masked

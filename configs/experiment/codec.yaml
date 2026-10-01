@@ -1,0 +1,60 @@
+# @package _global_
+# Stage 1: the motion codec of the paper (KL-VAE over 45-frame windows, 9 tokens x 48 dims, shape-conditioned
+# decoder with per-frame queries + a residual temporal refine head).
+#
+#   torchrun --nproc_per_node=2 train.py experiment=codec
+#
+# Budget of the released checkpoint: 60 epochs x 3000 iterations x 2 ranks x 1024 windows.
+# The codec sees every take and every persona x body cell of the training data, but the held-out evaluation
+# bodies stay out (data.split_apply=[bodies]): the decoder is the component that renders an unseen body.
+defaults:
+  - override /diffusion: vae
+  - override /continuity: enabled
+name: codec
+data:
+  name: motionpersonax_flat
+  path: data/motionpersonax_flat      # the full cross-body dataset: MotionPersonaX converted by scripts/prepare_data.py (flat_v1, see ../example_data)
+  batch_size: 1024
+  workers: 8
+  mirror_prob: 0.5
+  mirror_skel: true                   # mirror the skeleton too (SMPL-X skeletons are left/right asymmetric)
+  skel_root_basis: sole               # skel_offset[0] = pelvis height above the sole plane
+  split: data/eval/split_v2
+  split_apply: [bodies]
+  traj_pad: 18
+  sampler: balanced
+  balance_by: [subject]
+diffusion:
+  token_stride: 5
+  n_future_tokens: 9                  # = data.future_frame / token_stride
+  d_z: 48
+  beta: 5.0e-4
+  free_bits: 0.1
+  kl_anneal_frac: 0.2
+  encoder_cond: none
+  decoder_cond: past_tail+shape       # decoder sees the last n_tail true frames and the body shape (betas)
+  n_tail: 5
+  enc_layers: 6
+  dec_layers: 6
+  vae_latent_dim: 384
+  vae_ff_size: 1024
+  vae_heads: 4
+  vae_dropout: 0.1
+  dec_mode: query                     # one learned query per output frame
+  refine_layers: 3                    # residual depthwise temporal refine head
+  refine_kernel: 5
+loss:
+  diff: false
+  contact: true
+  contact_w: 100
+  accel: false
+trainer:
+  epochs: 60
+  limit_train_batches: 3000
+  lr: 1.0e-4
+  lr_min_ratio: 0.1
+  save_freq: 10
+  best_after: 10
+paths:
+  save: save
+  run_dir: ${paths.save}/${name}

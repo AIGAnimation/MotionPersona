@@ -1,0 +1,405 @@
+diff --git a/ai4animation/Standalone/Draw.py b/ai4animation/Standalone/Draw.py
+index f27784e..f2c7a0b 100644
+--- a/ai4animation/Standalone/Draw.py
++++ b/ai4animation/Standalone/Draw.py
+@@ -7,6 +7,18 @@ from ai4animation.AI4Animation import AI4Animation
+ from ai4animation.Math import Tensor, Transform as t, Vector3
+ from raylib.colors import BLACK, BLUE, GREEN, RED, WHITE
+ 
++# Local patch (persona/realtime): optional TTF replacing raylib's pixel font for all
++# 2D text, also handed to raygui so sliders/controls match. No-op unless SetFont is called.
++_CustomFont = None
++
++
++def SetFont(path, baseSize=64):
++    global _CustomFont
++    font = rl.LoadFontEx(Utility.ToBytes(path), int(baseSize), rl.ffi.NULL, 0)
++    rl.SetTextureFilter(font.texture, rl.TEXTURE_FILTER_BILINEAR)
++    rl.GuiSetFont(font)
++    _CustomFont = font
++
+ 
+ def ScreenWidth():
+     return rl.GetScreenWidth()
+@@ -158,13 +170,19 @@ def Text(
+ 
+     size = int(ScreenHeight() * size)
+ 
+-    w = rl.MeasureText(text, size)
++    if _CustomFont is not None:
++        w = rl.MeasureTextEx(_CustomFont, text, float(size), size / 10.0).x
++    else:
++        w = rl.MeasureText(text, size)
+     h = size
+ 
+     x = ScreenWidth() * x - w * pivot
+     y = ScreenHeight() * y
+ 
+-    rl.DrawText(text, int(x), int(y), size, color)
++    if _CustomFont is not None:
++        rl.DrawTextEx(_CustomFont, text, (float(x), float(y)), float(size), size / 10.0, color)
++    else:
++        rl.DrawText(text, int(x), int(y), size, color)
+ 
+ 
+ def Text3D(text, position, size=1.0, color=WHITE):
+diff --git a/ai4animation/Standalone/GUI.py b/ai4animation/Standalone/GUI.py
+index 9d9836a..c045597 100644
+--- a/ai4animation/Standalone/GUI.py
++++ b/ai4animation/Standalone/GUI.py
+@@ -52,25 +52,8 @@ class Canvas:
+         return rectangle
+ 
+     def GUI(self):
+-        rl.DrawRectangleRec(self.Rectangle.Screen().Tuple(), self.BodyColor)
+-        rl.DrawRectangleRec(self.Header.Screen().Tuple(), self.HeadColor)
+-        rl.DrawRectangleLinesEx(self.Rectangle.Screen().Tuple(), 2.0, self.FrameColor)
+-
+-        size = self.Header.height * 0.75
+-        offset_x = (
+-            self.Header.width / 2
+-            - rl.MeasureText(Utility.ToBytes(self.Label), int(ScreenHeight() * size))
+-            / ScreenWidth()
+-            / 2
+-        )
+-        offset_y = self.Header.height / 2 - 0.4 * size
+-        AI4Animation.Draw.Text(
+-            self.Label,
+-            self.Rectangle.x + offset_x,
+-            self.Rectangle.y + offset_y,
+-            size,
+-            color=self.TextColor,
+-        )
++        # Local patch (persona/realtime): BVHView-style native raygui group box.
++        rl.GuiGroupBox(self.Rectangle.Screen().Tuple(), Utility.ToBytes(self.Label))
+ 
+         for item in self.Items:
+             item.GUI()
+@@ -109,8 +92,8 @@ class Slider:
+                 self.Label + ": " + str(round(self.GetValue(), PRECISION)),
+                 rectangle.x + rectangle.width / 2.0,
+                 rectangle.y + rectangle.height / 4.0,
+-                size=rectangle.height / 2.0,
+-                color=AI4Animation.Color.BLACK,
++                size=rectangle.height * 0.42,
++                color=(95, 95, 95, 255),
+                 pivot=0.5,
+             )
+ 
+@@ -265,6 +248,8 @@ class TextField:
+ 
+ 
+ class Button:
++    LabelLikeSlider = False  # draw labels through Draw.Text with Slider's formula instead of raygui's
++
+     def __init__(
+         self,
+         label,
+@@ -319,47 +304,37 @@ class Button:
+         return self.IsHovered() and rl.IsMouseButtonReleased(rl.MOUSE_BUTTON_LEFT)
+ 
+     def GUI(self):
+-        if self.Toggle:
+-            if self.IsPressed() and rl.IsMouseButtonReleased(rl.MOUSE_BUTTON_LEFT):
+-                self.Active = not self.Active
+-
++        # Local patch (persona/realtime): native raygui controls (BVHView look).
+         rectangle = (
+             self.Canvas.ToCanvas(self.Rectangle) if self.Canvas else self.Rectangle
+         )
+-        screenRectangle = rectangle.Screen()
+-        rl.DrawRectangleRec(
+-            screenRectangle.Tuple(),
+-            (
+-                self.ColorActive
+-                if self.Active
+-                else self.ColorHovered
+-                if self.IsHovered()
+-                else self.ColorDefault
+-            ),
+-        )
+-        rl.DrawRectangleLinesEx(
+-            screenRectangle.Tuple(),
+-            2.0,
+-            (
+-                self.BorderActive
+-                if self.Active
+-                else self.BorderHovered
+-                if self.IsHovered()
+-                else self.BorderDefault
+-            ),
+-        )
+-
+-        size = rectangle.height * 0.75
+-        offset_x = (
+-            rectangle.width / 2
+-            - rl.MeasureText(Utility.ToBytes(self.Label), int(ScreenHeight() * size))
+-            / ScreenWidth()
+-            / 2
+-        )
+-        offset_y = rectangle.height / 2 - size / 2
+-        AI4Animation.Draw.Text(
+-            self.Label, rectangle.x + offset_x, rectangle.y + offset_y, size
+-        )
++        bounds = rectangle.Screen().Tuple()
++        # Button.LabelLikeSlider: draw the control empty and put the label through Draw.Text with Slider's own
++        # formula (size = 0.42 * box height, centred, mid-grey). raygui's own label uses the global DEFAULT
++        # TEXT_SIZE, which no per-button override can make match a Slider label drawn by a different code path.
++        label = Utility.ToBytes("" if Button.LabelLikeSlider else self.Label)
++        if self.Toggle:
++            state = rl.ffi.new("bool *", bool(self.Active))
++            rl.GuiToggle(bounds, label, state)
++            self.Active = bool(state[0])
++        else:
++            # A push button with Active set (Camera's radio-style mode buttons: the caller keeps Active on the
++            # current mode) is drawn in the pressed look; GuiButton still reports clicks in that state.
++            if self.Active:
++                rl.GuiSetState(rl.STATE_PRESSED)
++            pressed = rl.GuiButton(bounds, label)
++            rl.GuiSetState(rl.STATE_NORMAL)
++            if pressed:
++                self.Active = True
++        if Button.LabelLikeSlider and self.Label:
++            AI4Animation.Draw.Text(
++                self.Label,
++                rectangle.x + rectangle.width / 2.0,
++                rectangle.y + rectangle.height / 4.0,
++                size=rectangle.height * 0.42,
++                color=(95, 95, 95, 255),
++                pivot=0.5,
++            )
+ 
+ 
+ class Handle:
+diff --git a/ai4animation/Standalone/RenderPipeline.py b/ai4animation/Standalone/RenderPipeline.py
+index bf08573..93221c2 100644
+--- a/ai4animation/Standalone/RenderPipeline.py
++++ b/ai4animation/Standalone/RenderPipeline.py
+@@ -1144,6 +1144,12 @@ class ForwardRenderPipeline(Component):
+         )
+         self.LoadedShaders.append(self.SkinnedForwardShader)
+ 
++        # Local patch (persona/realtime): checkerboard ground, ported from grid.fs
++        self.GridForwardShader = LoadShaderFromMemory(
++            utils.ToBytes(_load("forward.vs")), utils.ToBytes(_load("forwardGrid.fs"))
++        )
++        self.LoadedShaders.append(self.GridForwardShader)
++
+         # Shadow shader (planar projection onto Y=0, skinned models only)
+         self.SkinnedShadowShader = LoadShaderFromMemory(
+             utils.ToBytes(_load("forwardSkinnedShadow.vs")),
+@@ -1203,6 +1209,12 @@ class ForwardRenderPipeline(Component):
+                 registered.skinned_mesh.Update()
+ 
+         ClearBackground(BLACK)
++        # Local patch (persona/realtime): sky gradient behind the scene
++        import raylib as _rl
++        _rl.DrawRectangleGradientV(
++            0, 0, _rl.GetScreenWidth(), _rl.GetScreenHeight(),
++            (172, 192, 212, 255), (228, 232, 238, 255),
++        )
+         BeginMode3D(self.Camera)
+ 
+         # Main pass — opaque geometry with forward lighting
+@@ -1210,6 +1222,8 @@ class ForwardRenderPipeline(Component):
+             shader = (
+                 self.SkinnedForwardShader
+                 if registered.skinned_mesh
++                else self.GridForwardShader
++                if registered.name == "Ground"
+                 else self.ForwardShader
+             )
+             registered.Draw(shader)
+diff --git a/ai4animation/Standalone/Standalone.py b/ai4animation/Standalone/Standalone.py
+index 853f716..cea3f8b 100644
+--- a/ai4animation/Standalone/Standalone.py
++++ b/ai4animation/Standalone/Standalone.py
+@@ -8,6 +8,9 @@ from ai4animation.AI4Animation import AI4Animation
+ from ai4animation.Math import Rotation, Vector3
+ 
+ IS_MACOS = sys.platform == "darwin"
++# Local patch (persona/realtime): the forward pipeline is mandatory on macOS and can be requested elsewhere
++# (AI4ANIMATION_PIPELINE=forward) for the same look on a Linux / WSL box.
++USE_FORWARD = IS_MACOS or os.environ.get("AI4ANIMATION_PIPELINE", "").lower() == "forward"
+ 
+ DEFAULT_WIDTH = 1920
+ DEFAULT_HEIGHT = 1080
+@@ -29,11 +32,12 @@ class Standalone:
+         render_module = self.LoadModule("RenderPipeline")
+         pipeline_class = (
+             render_module.ForwardRenderPipeline
+-            if IS_MACOS
++            if USE_FORWARD
+             else render_module.RenderPipeline
+         )
+-        if IS_MACOS:
+-            print("macOS detected: using forward rendering pipeline")
++        if USE_FORWARD:
++            print("macOS detected: using forward rendering pipeline" if IS_MACOS
++                  else "AI4ANIMATION_PIPELINE=forward: using forward rendering pipeline")
+         self.RenderPipeline = AI4Animation.Scene.AddEntity(
+             "RenderPipeline"
+         ).AddComponent(pipeline_class, self.Camera.Camera)
+@@ -103,22 +107,22 @@ class Standalone:
+     def Update(self):
+         AI4Animation.__UPDATE__()
+         # Render
+-        if not IS_MACOS:
++        if not USE_FORWARD:
+             rl.rlDisableColorBlend()
+         rl.BeginDrawing()
+         self.RenderPipeline.Render(lambda: AI4Animation.__DRAW__())
+         # UI
+-        if not IS_MACOS:
++        if not USE_FORWARD:
+             rl.rlEnableColorBlend()
+         AI4Animation.Draw.Text(
+-            "FPS " + str(rl.GetFPS()), 0.02, 0.97, 0.02, AI4Animation.Color.BLACK
++            "FPS " + str(rl.GetFPS()), 0.02, 0.97, 0.016, (95, 95, 95, 255)
+         )
+         AI4Animation.Draw.Text(
+             "Entities: " + str(len(AI4Animation.Scene.Entities)),
+             0.02,
+             0.95,
+-            0.02,
+-            AI4Animation.Color.BLACK,
++            0.016,
++            (95, 95, 95, 255),
+         )
+         AI4Animation.__GUI__()
+         rl.EndDrawing()
+diff --git a/ai4animation/Standalone/resources/shaders/forward.fs b/ai4animation/Standalone/resources/shaders/forward.fs
+index 7b7d959..8da8661 100644
+--- a/ai4animation/Standalone/resources/shaders/forward.fs
++++ b/ai4animation/Standalone/resources/shaders/forward.fs
+@@ -2,8 +2,10 @@
+ 
+ in vec3 fragNormal;
+ in vec4 fragColor;
++in vec2 fragTexCoord;
+ 
+ uniform vec4 colDiffuse;
++uniform sampler2D texture0;
+ 
+ out vec4 finalColor;
+ 
+@@ -19,6 +21,6 @@ void main()
+     float up = normal.y * 0.5 + 0.5;
+     vec3 ambient = mix(vec3(0.15, 0.12, 0.10), vec3(0.25, 0.28, 0.35), up);
+ 
+-    vec3 color = fragColor.rgb * colDiffuse.rgb;
++    vec3 color = texture(texture0, fragTexCoord).rgb * fragColor.rgb * colDiffuse.rgb;
+     finalColor = vec4(color * (ambient + diff * 0.65), colDiffuse.a);
+ }
+diff --git a/ai4animation/Standalone/resources/shaders/forward.vs b/ai4animation/Standalone/resources/shaders/forward.vs
+index bfc5d73..92f974c 100644
+--- a/ai4animation/Standalone/resources/shaders/forward.vs
++++ b/ai4animation/Standalone/resources/shaders/forward.vs
+@@ -10,10 +10,12 @@ uniform mat4 matModel;
+ 
+ out vec3 fragNormal;
+ out vec4 fragColor;
++out vec2 fragTexCoord;
+ 
+ void main()
+ {
+     fragNormal = normalize(mat3(matModel) * vertexNormal);
+     fragColor = vertexColor;
++    fragTexCoord = vertexTexCoord;
+     gl_Position = mvp * vec4(vertexPosition, 1.0);
+ }
+diff --git a/ai4animation/Standalone/resources/shaders/forwardSkinned.vs b/ai4animation/Standalone/resources/shaders/forwardSkinned.vs
+index ecec377..00425fe 100644
+--- a/ai4animation/Standalone/resources/shaders/forwardSkinned.vs
++++ b/ai4animation/Standalone/resources/shaders/forwardSkinned.vs
+@@ -16,6 +16,7 @@ uniform mat4 matModel;
+ 
+ out vec3 fragNormal;
+ out vec4 fragColor;
++out vec2 fragTexCoord;
+ 
+ void main()
+ {
+@@ -39,5 +40,6 @@ void main()
+     vec3 worldPosition = skinnedPosition.xyz / skinnedPosition.w;
+     fragNormal = normalize(mat3(matModel) * skinnedNormal);
+     fragColor = vertexColor;
++    fragTexCoord = vertexTexCoord;
+     gl_Position = mvp * vec4(worldPosition, 1.0);
+ }
+diff --git a/setup.py b/setup.py
+index e8a1fad..18a8d5d 100644
+--- a/setup.py
++++ b/setup.py
+@@ -16,10 +16,10 @@ setup(
+             "convert=ai4animation.Import.BatchConverter:main",
+         ],
+     },
+-    python_requires=">=3.12.12",
++    python_requires=">=3.12",
+     install_requires=[
+         "raylib==5.5",
+-        "numpy==1.26.4",
++        "numpy>=1.26",
+         "pygltflib==1.16.5",
+         "pyscreenrec==0.6",
+         "torch>=2.0.0",
+diff --git a/ai4animation/Standalone/resources/shaders/forwardGrid.fs b/ai4animation/Standalone/resources/shaders/forwardGrid.fs
+new file mode 100644
+index 0000000..9e18e94
+--- /dev/null
++++ b/ai4animation/Standalone/resources/shaders/forwardGrid.fs
+@@ -0,0 +1,53 @@
++#version 410
++
++in vec3 fragNormal;
++in vec4 fragColor;
++in vec2 fragTexCoord;
++
++uniform vec4 colDiffuse;
++
++out vec4 finalColor;
++
++float Grid(in vec2 uv, in float lineWidth)
++{
++    vec4 uvDDXY = vec4(dFdx(uv), dFdy(uv));
++    vec2 uvDeriv = vec2(length(uvDDXY.xz), length(uvDDXY.yw));
++    float targetWidth = lineWidth > 0.5 ? 1.0 - lineWidth : lineWidth;
++    vec2 drawWidth = clamp(
++        vec2(targetWidth, targetWidth), uvDeriv, vec2(0.5, 0.5));
++    vec2 lineAA = uvDeriv * 1.5;
++    vec2 gridUV = abs(fract(uv) * 2.0 - 1.0);
++    gridUV = lineWidth > 0.5 ? gridUV : 1.0 - gridUV;
++    vec2 g2 = smoothstep(drawWidth + lineAA, drawWidth - lineAA, gridUV);
++    g2 *= clamp(targetWidth / drawWidth, 0.0, 1.0);
++    g2 = mix(g2, vec2(targetWidth, targetWidth),
++        clamp(uvDeriv * 2.0 - 1.0, 0.0, 1.0));
++    g2 = lineWidth > 0.5 ? 1.0 - g2 : g2;
++    return mix(g2.x, 1.0, g2.y);
++}
++
++float Checker(in vec2 uv)
++{
++    vec4 uvDDXY = vec4(dFdx(uv), dFdy(uv));
++    vec2 w = vec2(length(uvDDXY.xz), length(uvDDXY.yw));
++    vec2 i = 2.0*(abs(fract((uv-0.5*w)*0.5)-0.5)-
++                  abs(fract((uv+0.5*w)*0.5)-0.5))/w;
++    return 0.5 - 0.5*i.x*i.y;
++}
++
++void main()
++{
++    float gridFine = Grid(20.0 * 10.0 * fragTexCoord, 0.025);
++    float gridCoarse = Grid(2.0 * 10.0 * fragTexCoord, 0.02);
++    float check = Checker(2.0 * 10.0 * fragTexCoord);
++    float shade = mix(mix(mix(0.9, 0.95, check), 0.85, gridFine), 1.0, gridCoarse);
++
++    vec3 lightDir = normalize(vec3(0.35, -1.0, -0.35));
++    vec3 normal = normalize(fragNormal);
++    float diff = max(dot(normal, -lightDir), 0.0);
++    float up = normal.y * 0.5 + 0.5;
++    vec3 ambient = mix(vec3(0.15, 0.12, 0.10), vec3(0.25, 0.28, 0.35), up);
++
++    vec3 color = fragColor.rgb * colDiffuse.rgb * shade;
++    finalColor = vec4(color * (ambient + diff * 0.65), colDiffuse.a);
++}

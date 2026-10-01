@@ -1,0 +1,25 @@
+name: sample10
+path: example_data/sample10     # flat_v1 dataset dir
+past_frame: 10
+future_frame: 45
+offset_frame: 1                    # clip stride in frames; null -> clip_len (non-overlapping, debug)
+limited_num: -1                    # use only the first N motions (-1 = all)
+batch_size: 4096
+workers: 8
+pin_memory: true
+drop_last: true
+prefetch_factor: 4
+prewarm: true                      # sequentially read frames/*.npy once (page cache) before training
+seed: 0                            # augmentation RNG seed (mixed with worker id / rank)
+mirror_prob: 0.5                   # training-time left/right mirroring
+mirror_skel: false                 # also mirror skel_offset for mirrored clips (SMPL-X skeletons are asymmetric)
+skel_root_basis: sole              # what skel_offset[0] (root row) means in this dataset -- recorded into the ckpt so consumers that rebuild skel_offset from betas (realtime, data/bodies.betas_to_offsets root_basis=) use the same basis. sole = pelvis above the rigid-foot corner plane y=0 (the released data) | joint = pelvis above the lowest foot joint (ckpts without this key)
+text_source: text_feat             # text token array under motions/: text_feat = CLIP of the fused persona+style prompts | persona_feat = persona-only prompts (pair with model.style_cond=embed); only read by model.persona_cond=text
+traj_pad: 18                       # root-path context (frames) beyond the clip for the traj smoothing; null = reflect at the clip boundary (brakes the last ~10 frames)
+sampler: uniform                   # uniform | balanced (StratifiedClipSampler over manifest strata, per-rank)
+balance_by: [subject]              # strata keys for the balanced sampler (manifest.csv columns or meta skel_name)
+holdout: null                      # e.g. {bodies: [3, 17], pairs: [[p12, 9]]}: motions excluded from training (manifest-based)
+split: null                        # split directory (data/eval/split_v2): its held-out bodies, withheld persona x body cells and held-out source takes are excluded from training (added to `holdout`); the four files' sha256 go into the run config (data.split_sha)
+split_apply: null                  # which of the split's three clauses actually leave training: null = all three (the prior); [bodies] = the stage-1 codec (a reconstruction model may see every take and every persona x body cell, but the 15 held-out bodies stay out because the decoder is shape-conditioned); [] = train on everything
+attr_shuffle: null                 # int seed = the shuffled-attribute ablation: every subject carries another subject's role/affiliation/dominance (seeded derangement, consistent per subject); null = the true attributes
+end_token_prob: 0.0                # in-betweening: P(the stage-2 prior sees the window's END token) per training sample. The end token is built exactly like the history token: the frozen codec encoder over the window's LAST diffusion.token_stride frames (5 -> frames 50..54 of the 55-frame clip), z-normalised, through its own nn.Linear. 0.0 = off (the released model): no module, no token, no extra RNG draw. 1.0 = always visible (the in-betweening application); 0 < p < 1 = one model that can do both (a masked sample zeroes the pre-embedding vector, so the Linear's bias is the learned 'no end keyframe' token, exactly how model.cond_mask_prob treats the history). Only the latfm head reads it.

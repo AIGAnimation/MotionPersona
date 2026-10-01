@@ -1,0 +1,29 @@
+# Stage-1 KL-VAE motion codec (network/vae.py). Shape-agnostic by default (encoder_cond none, no betas
+# input); the recon loss still uses skel_offset through compute_losses. Temporal latent: 45 future
+# frames -> n_future_tokens tokens of d_z (token_stride frames each); 10 past frames -> 1 history token.
+# Export semantics: pred == sample == deterministic reconstruction (z = mu), i.e. codec fidelity.
+type: vae
+token_stride: 15
+n_future_tokens: 3     # must equal data.future_frame / token_stride
+d_z: 64                # sweep {32, 64}
+beta: 1.0e-4           # KL weight after annealing (MLD-style compressor)
+free_bits: 0.1         # nats per latent element
+kl_anneal_frac: 0.2    # linear 0 -> beta over the first frac of epochs
+encoder_cond: none     # none | shape (shape-invariant variant)
+decoder_cond: past_tail   # none | past_tail | past_tail+shape (shape-conditioned decoder, the paper's codec)
+n_tail: 5              # real frames fed to the decoder (seam conditioning)
+enc_layers: 4
+dec_layers: 4
+vae_latent_dim: 256
+vae_ff_size: 1024
+vae_heads: 4
+vae_dropout: 0.1
+# ---- parent-compat shim: MotionDiffusionModule.__init__ builds an (unused) DDPMScheduler from these.
+# Do not remove (struct mode). ----
+num_train_timesteps: 1000
+beta_schedule: squaredcos_cap_v2
+prediction_type: sample
+variance_type: fixed_small
+clip_sample: false
+num_inference_steps: null
+delta: false

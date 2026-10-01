@@ -1,0 +1,7 @@
+num_train_timesteps: 4
+beta_schedule: squaredcos_cap_v2
+prediction_type: sample
+variance_type: fixed_small
+clip_sample: false
+num_inference_steps: null          # null -> num_train_timesteps
+delta: false                       # predict motion relative to the last past frame (data_delta)

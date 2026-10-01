@@ -1,0 +1,6 @@
+# loss terms for delta prediction: mse, 3d, vel (no diff, no contact)
+mse: true
+geo3d: true
+vel: true
+diff: false
+contact: false

@@ -1,0 +1,26 @@
+# Stage-2 flow matching in the stage-1 codec's token space (network/latfm.py). Denoiser dims come from
+# cfg.model (latent_dim/ff_size/num_layers/num_heads) so the capacity ladder applies uniformly.
+# Export semantics: pred = decoded one-pass z1_hat at a random t; sample = decoded ODE rollout.
+type: latfm
+vae_ckpt: ???          # REQUIRED: stage-1 best.ckpt (e.g. save/codec/best.ckpt); loaded frozen
+time_bins: 1000
+sample_steps: 8        # export --steps overrides
+sampler: euler         # euler | heun | x1 (x1 = x1-anchored non-compounding steps, DDPM-x0 style)
+z_posterior_sample: true   # z1 ~ q(z|x) during training (false: z1 = mu, ablation)
+use_shape: true        # betas token in the prior (the paper's prior); false = shape-invariant codec (betas in decoder)
+# ---- denoiser variants (defaults = the token denoiser; the paper's prior uses arch=dit) ----
+arch: token            # token = in-context time token + post-LN nn.TransformerEncoder | dit = pre-LN adaLN-Zero blocks (LatentDiT)
+pos: abs               # dit only: abs = additive token-index sinusoid | rope = rotary attention on shared frame-time positions
+rope_base: 10000.0     # rope frequency base (positions are frames, window = 55)
+grad_ckpt: false       # dit only: activation checkpointing per block (same numbers, ~30% slower, ~1/4 the memory)
+t_sampling: uniform    # uniform bins | logit_normal (SD3: t = sigmoid(N(t_ln_mean, t_ln_std)), mid-t emphasis)
+t_ln_mean: 0.0
+t_ln_std: 1.0
+# ---- parent-compat shim (unused DDPMScheduler; do not remove) ----
+num_train_timesteps: 1000
+beta_schedule: squaredcos_cap_v2
+prediction_type: sample
+variance_type: fixed_small
+clip_sample: false
+num_inference_steps: null
+delta: false
